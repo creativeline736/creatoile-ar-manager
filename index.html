@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Créatoile — Gestionnaire AR</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500;600&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --gold:    #C8A96E;
+    --gold-dk: #A07840;
+    --bg:      #0D0D0D;
+    --card:    #111111;
+    --card2:   #1A1A1A;
+    --border:  #222222;
+    --text:    #E8E0D0;
+    --muted:   #888888;
+    --error:   #E05C3A;
+    --success: #7AB84A;
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 24px 40px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 28px;
+    color: var(--gold);
+    letter-spacing: 0.02em;
+  }
+
+  header span {
+    font-size: 13px;
+    color: var(--muted);
+    margin-left: 4px;
+  }
+
+  /* ── Auth ── */
+  #auth-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: calc(100vh - 80px);
+    gap: 24px;
+  }
+
+  #auth-screen h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 32px;
+    color: var(--gold);
+  }
+
+  #auth-screen p {
+    color: var(--muted);
+    font-size: 15px;
+  }
+
+  .auth-form {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 36px;
+    width: 100%;
+    max-width: 420px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* ── Main ── */
+  #main-screen {
+    display: none;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 24px;
+    gap: 32px;
+    flex-direction: column;
+  }
+
+  /* ── Toiles list ── */
+  #toiles-section h2,
+  #add-section h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    color: var(--gold);
+    margin-bottom: 20px;
+  }
+
+  .toile-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 12px;
+    transition: border-color 0.2s;
+  }
+
+  .toile-card:hover { border-color: var(--gold-dk); }
+
+  .toile-thumb {
+    width: 64px;
+    height: 64px;
+    border-radius: 8px;
+    object-fit: cover;
+    background: var(--card2);
+    flex-shrink: 0;
+  }
+
+  .toile-info { flex: 1; }
+
+  .toile-ref {
+    font-size: 13px;
+    color: var(--gold);
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .toile-dims {
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  .toile-status {
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    background: rgba(122,184,74,0.15);
+    color: var(--success);
+    font-weight: 600;
+  }
+
+  .btn-delete {
+    background: none;
+    border: 1px solid #333;
+    color: var(--error);
+    border-radius: 8px;
+    padding: 8px 14px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.2s;
+  }
+
+  .btn-delete:hover {
+    background: rgba(224,92,58,0.1);
+    border-color: var(--error);
+  }
+
+  /* ── Form ── */
+  .form-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .form-group.full { grid-column: 1 / -1; }
+
+  label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  input, select {
+    background: var(--card2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    padding: 12px 16px;
+    outline: none;
+    transition: border-color 0.2s;
+    width: 100%;
+  }
+
+  input:focus, select:focus { border-color: var(--gold); }
+
+  select option { background: var(--card2); }
+
+  /* ── Upload zones ── */
+  .upload-zone {
+    background: var(--card2);
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    padding: 28px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+
+  .upload-zone:hover, .upload-zone.dragover {
+    border-color: var(--gold);
+    background: rgba(200,169,110,0.05);
+  }
+
+  .upload-zone input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: none;
+    background: none;
+  }
+
+  .upload-icon { font-size: 32px; margin-bottom: 8px; }
+
+  .upload-label {
+    font-size: 14px;
+    color: var(--muted);
+  }
+
+  .upload-label strong { color: var(--gold); }
+
+  .upload-preview {
+    margin-top: 12px;
+    border-radius: 8px;
+    overflow: hidden;
+    max-height: 160px;
+    display: none;
+  }
+
+  .upload-preview img,
+  .upload-preview video {
+    width: 100%;
+    max-height: 160px;
+    object-fit: cover;
+  }
+
+  /* ── Progress ── */
+  .progress-bar-wrap {
+    background: var(--border);
+    border-radius: 99px;
+    height: 6px;
+    overflow: hidden;
+    display: none;
+    margin-top: 8px;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    background: var(--gold);
+    border-radius: 99px;
+    width: 0%;
+    transition: width 0.3s;
+  }
+
+  /* ── Buttons ── */
+  .btn-primary {
+    background: var(--gold);
+    color: #0D0D0D;
+    border: none;
+    border-radius: 12px;
+    padding: 16px 32px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    width: 100%;
+    margin-top: 24px;
+  }
+
+  .btn-primary:hover { background: var(--gold-dk); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .btn-secondary {
+    background: none;
+    color: var(--gold);
+    border: 1px solid var(--gold);
+    border-radius: 10px;
+    padding: 10px 20px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-secondary:hover { background: rgba(200,169,110,0.1); }
+
+  /* ── Feedback ── */
+  .feedback {
+    padding: 14px 18px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    display: none;
+    margin-top: 16px;
+  }
+
+  .feedback.success {
+    background: rgba(122,184,74,0.1);
+    border: 1px solid var(--success);
+    color: var(--success);
+  }
+
+  .feedback.error {
+    background: rgba(224,92,58,0.1);
+    border: 1px solid var(--error);
+    color: var(--error);
+  }
+
+  /* ── Status log ── */
+  #status-log {
+    background: var(--card2);
+    border-radius: 10px;
+    padding: 16px;
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.8;
+    display: none;
+    margin-top: 16px;
+    white-space: pre-line;
+  }
+
+  /* ── Divider ── */
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 8px 0;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+
+  .badge-count {
+    background: var(--gold);
+    color: #0D0D0D;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 99px;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 40px;
+    color: var(--muted);
+    font-size: 15px;
+  }
+
+  @media (max-width: 600px) {
+    .form-grid { grid-template-columns: 1fr; }
+    header { padding: 16px 20px; }
+    #main-screen { padding: 24px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Créatoile <span>— Gestionnaire AR</span></h1>
+  </div>
+  <div style="margin-left:auto;display:flex;gap:12px;align-items:center;">
+    <span id="user-email" style="font-size:13px;color:var(--muted);"></span>
+    <button class="btn-secondary" id="btn-logout" style="display:none" onclick="logout()">Déconnexion</button>
+  </div>
+</header>
+
+<!-- ── Auth ── -->
+<div id="auth-screen">
+  <h2>Connexion Admin</h2>
+  <p>Accès réservé à Créativeline</p>
+  <div class="auth-form">
+    <div class="form-group">
+      <label>Email</label>
+      <input type="email" id="auth-email" placeholder="creativeline@outlook.fr">
+    </div>
+    <div class="form-group">
+      <label>Mot de passe</label>
+      <input type="password" id="auth-password" placeholder="••••••••">
+    </div>
+    <button class="btn-primary" onclick="login()" style="margin-top:8px">
+      Se connecter
+    </button>
+    <div class="feedback" id="auth-feedback"></div>
+  </div>
+</div>
+
+<!-- ── Main ── -->
+<div id="main-screen">
+
+  <!-- Liste des toiles AR -->
+  <div id="toiles-section">
+    <div class="section-header">
+      <h2>🎨 Toiles AR actives</h2>
+      <span class="badge-count" id="toiles-count">0</span>
+    </div>
+    <div id="toiles-list">
+      <div class="empty-state">Chargement…</div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Ajouter une toile -->
+  <div id="add-section">
+    <h2>➕ Ajouter une toile AR</h2>
+    <div class="form-card">
+      <div class="form-grid">
+
+        <div class="form-group">
+          <label>Référence commande</label>
+          <input type="text" id="f-ref" placeholder="NB-XXXXX">
+        </div>
+
+        <div class="form-group">
+          <label>Largeur réelle (cm)</label>
+          <input type="number" id="f-width" placeholder="30">
+        </div>
+
+        <div class="form-group">
+          <label>Hauteur réelle (cm)</label>
+          <input type="number" id="f-height" placeholder="40">
+        </div>
+
+        <div class="form-group">
+          <label>Style</label>
+          <input type="text" id="f-style" placeholder="Portrait réaliste, Pop Art…">
+        </div>
+
+        <!-- Photo référence AR -->
+        <div class="form-group full">
+          <label>📸 Photo référence AR (fond neutre, toile seule)</label>
+          <div class="upload-zone" id="zone-image">
+            <input type="file" id="f-image" accept="image/*"
+                   onchange="previewFile(this,'prev-image','img')">
+            <div class="upload-icon">🖼️</div>
+            <div class="upload-label">
+              <strong>Choisir une photo</strong> ou glisser ici<br>
+              <small>JPG / PNG — minimum 512×512 px</small>
+            </div>
+            <div class="upload-preview" id="prev-image">
+              <img id="prev-image-el" src="" alt="">
+            </div>
+            <div class="progress-bar-wrap" id="prog-image">
+              <div class="progress-bar-fill" id="prog-image-fill"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Vidéo animation -->
+        <div class="form-group full">
+          <label>🎬 Vidéo animation (MP4)</label>
+          <div class="upload-zone" id="zone-video">
+            <input type="file" id="f-video" accept="video/mp4,video/*"
+                   onchange="previewFile(this,'prev-video','video')">
+            <div class="upload-icon">🎥</div>
+            <div class="upload-label">
+              <strong>Choisir une vidéo</strong> ou glisser ici<br>
+              <small>MP4 recommandé</small>
+            </div>
+            <div class="upload-preview" id="prev-video">
+              <video id="prev-video-el" controls muted></video>
+            </div>
+            <div class="progress-bar-wrap" id="prog-video">
+              <div class="progress-bar-fill" id="prog-video-fill"></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <button class="btn-primary" id="btn-add" onclick="addToile()">
+        ✨ Ajouter la toile AR
+      </button>
+
+      <div class="feedback" id="add-feedback"></div>
+      <div id="status-log"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { getFirestore, collection, addDoc, getDocs,
+         deleteDoc, doc, query, where, orderBy }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js';
+
+// ── Config Firebase ──────────────────────────────────────
+// ⚠️ Remplace par ta config Firebase
+const firebaseConfig = {
+
+  apiKey: "AIzaSyAnH8GlcX_cg5FZoEuatpHBQXY352zRzxw",
+
+  authDomain: "creatoile-e8c08.firebaseapp.com",
+
+  projectId: "creatoile-e8c08",
+
+  storageBucket: "creatoile-e8c08.firebasestorage.app",
+
+  messagingSenderId: "1010828511040",
+
+  appId: "1:1010828511040:web:7c57a2ba78e371475fdca5"
+
+};
+
+
+const app     = initializeApp(firebaseConfig);
+const auth    = getAuth(app);
+const db      = getFirestore(app);
+const storage = getStorage(app);
+
+// ── Auth state ───────────────────────────────────────────
+onAuthStateChanged(auth, user => {
+  if (user) {
+    document.getElementById('auth-screen').style.display = 'none';
+    document.getElementById('main-screen').style.display = 'flex';
+    document.getElementById('user-email').textContent    = user.email;
+    document.getElementById('btn-logout').style.display  = 'block';
+    loadToiles();
+  } else {
+    document.getElementById('auth-screen').style.display = 'flex';
+    document.getElementById('main-screen').style.display = 'none';
+    document.getElementById('btn-logout').style.display  = 'none';
+  }
+});
+
+// ── Login ────────────────────────────────────────────────
+window.login = async () => {
+  const email    = document.getElementById('auth-email').value.trim();
+  const password = document.getElementById('auth-password').value;
+  const fb       = document.getElementById('auth-feedback');
+
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+  } catch(e) {
+    showFeedback(fb, 'Email ou mot de passe incorrect.', 'error');
+  }
+};
+
+// ── Logout ───────────────────────────────────────────────
+window.logout = async () => {
+  await signOut(auth);
+};
+
+// ── Charge les toiles ────────────────────────────────────
+window.loadToiles = async () => {
+  const list = document.getElementById('toiles-list');
+  const badge = document.getElementById('toiles-count');
+  list.innerHTML = '<div class="empty-state">Chargement…</div>';
+
+  try {
+    const q = query(
+      collection(db, 'orders'),
+      where('withAnimation', '==', true),
+      where('status', '==', 'completed')
+    );
+
+    const snap = await getDocs(q);
+    badge.textContent = snap.size;
+
+    if (snap.empty) {
+      list.innerHTML = '<div class="empty-state">Aucune toile AR pour le moment</div>';
+      return;
+    }
+
+    list.innerHTML = '';
+
+    snap.forEach(docSnap => {
+      const d       = docSnap.data();
+      const ref_    = d.orderRef  || docSnap.id;
+      const dims    = (d.widthCm  || '?') + ' × ' + (d.heightCm || '?') + ' cm';
+      const style   = d.styleName || '';
+      const imgUrl  = d.imageTarget || '';
+
+      const card = document.createElement('div');
+      card.className = 'toile-card';
+      card.innerHTML = `
+        ${imgUrl
+          ? `<img class="toile-thumb" src="${imgUrl}" alt="">`
+          : `<div class="toile-thumb" style="display:flex;align-items:center;
+             justify-content:center;font-size:24px;">🖼️</div>`}
+        <div class="toile-info">
+          <div class="toile-ref">${ref_}</div>
+          <div class="toile-dims">${dims}${style ? ' — ' + style : ''}</div>
+        </div>
+        <span class="toile-status">✅ Active</span>
+        <button class="btn-delete" onclick="deleteToile('${docSnap.id}')">
+          Supprimer
+        </button>`;
+      list.appendChild(card);
+    });
+
+  } catch(e) {
+    list.innerHTML = `<div class="empty-state">Erreur : ${e.message}</div>`;
+  }
+};
+
+// ── Supprime une toile ───────────────────────────────────
+window.deleteToile = async (docId) => {
+  if (!confirm('Supprimer cette toile AR ?')) return;
+  try {
+    await deleteDoc(doc(db, 'orders', docId));
+    loadToiles();
+  } catch(e) {
+    alert('Erreur : ' + e.message);
+  }
+};
+
+// ── Ajoute une toile ─────────────────────────────────────
+window.addToile = async () => {
+  const btn      = document.getElementById('btn-add');
+  const fb       = document.getElementById('add-feedback');
+  const log      = document.getElementById('status-log');
+  const orderRef = document.getElementById('f-ref').value.trim();
+  const widthCm  = parseFloat(document.getElementById('f-width').value);
+  const heightCm = parseFloat(document.getElementById('f-height').value);
+  const style    = document.getElementById('f-style').value.trim();
+  const imgFile  = document.getElementById('f-image').files[0];
+  const vidFile  = document.getElementById('f-video').files[0];
+
+  // Validation
+  if (!orderRef) return showFeedback(fb, '⚠ Référence commande requise', 'error');
+  if (!widthCm || !heightCm) return showFeedback(fb, '⚠ Dimensions requises', 'error');
+  if (!imgFile) return showFeedback(fb, '⚠ Photo de référence requise', 'error');
+  if (!vidFile) return showFeedback(fb, '⚠ Vidéo d\'animation requise', 'error');
+
+  btn.disabled = true;
+  fb.style.display = 'none';
+  log.style.display = 'block';
+  log.textContent = '';
+
+  const addLog = t => { log.textContent += t + '\n'; };
+
+  try {
+    // Upload image
+    addLog('📸 Upload de la photo référence…');
+    document.getElementById('prog-image').style.display = 'block';
+    const imgUrl = await uploadFile(
+      imgFile,
+      `targets/${orderRef}.jpg`,
+      'prog-image-fill',
+      addLog
+    );
+    addLog('✅ Photo uploadée !');
+
+    // Upload vidéo
+    addLog('🎬 Upload de la vidéo animation…');
+    document.getElementById('prog-video').style.display = 'block';
+    const vidUrl = await uploadFile(
+      vidFile,
+      `videos/${orderRef}.mp4`,
+      'prog-video-fill',
+      addLog
+    );
+    addLog('✅ Vidéo uploadée !');
+
+    // Création Firestore
+    addLog('💾 Création du document Firestore…');
+    await addDoc(collection(db, 'orders'), {
+      orderRef:      orderRef,
+      styleName:     style,
+      widthCm:       widthCm,
+      heightCm:      heightCm,
+      imageTarget:   imgUrl,
+      videoUrl:      vidUrl,
+      withAnimation: true,
+      status:        'completed',
+      userId:        'public',
+      isPublic:      true,
+      userEmail:     '',
+      userName:      'Créatoile',
+      price:         '0 €',
+      format:        widthCm + ' × ' + heightCm + ' cm',
+      description:   '',
+      address:       '',
+      createdAt:     new Date()
+    });
+
+    addLog('✅ Toile AR ajoutée avec succès !');
+    showFeedback(fb, '✅ Toile AR ajoutée ! Elle est maintenant visible dans l\'app.', 'success');
+
+    // Reset form
+    document.getElementById('f-ref').value    = '';
+    document.getElementById('f-width').value  = '';
+    document.getElementById('f-height').value = '';
+    document.getElementById('f-style').value  = '';
+    document.getElementById('f-image').value  = '';
+    document.getElementById('f-video').value  = '';
+    document.getElementById('prev-image').style.display = 'none';
+    document.getElementById('prev-video').style.display = 'none';
+    document.getElementById('prog-image').style.display = 'none';
+    document.getElementById('prog-video').style.display = 'none';
+
+    loadToiles();
+
+  } catch(e) {
+    addLog('❌ Erreur : ' + e.message);
+    showFeedback(fb, '❌ Erreur : ' + e.message, 'error');
+  }
+
+  btn.disabled = false;
+};
+
+// ── Upload fichier Firebase Storage ─────────────────────
+function uploadFile(file, path, progressId, log) {
+  return new Promise((resolve, reject) => {
+    const storageRef = ref(storage, path);
+    const task       = uploadBytesResumable(storageRef, file);
+
+    task.on('state_changed',
+      snap => {
+        const pct = Math.round(snap.bytesTransferred / snap.totalBytes * 100);
+        document.getElementById(progressId).style.width = pct + '%';
+        if (log) log(`   ${pct}%`);
+      },
+      err => reject(err),
+      async () => {
+        const url = await getDownloadURL(task.snapshot.ref);
+        resolve(url);
+      }
+    );
+  });
+}
+
+// ── Preview fichier ──────────────────────────────────────
+window.previewFile = (input, previewId, type) => {
+  const file    = input.files[0];
+  const preview = document.getElementById(previewId);
+  const el      = document.getElementById(previewId + '-el');
+  if (!file) return;
+
+  const url = URL.createObjectURL(file);
+  el.src = url;
+  preview.style.display = 'block';
+};
+
+// ── Feedback ─────────────────────────────────────────────
+function showFeedback(el, msg, type) {
+  el.textContent    = msg;
+  el.className      = 'feedback ' + type;
+  el.style.display  = 'block';
+}
+
+// ── Keyboard enter sur auth ──────────────────────────────
+document.getElementById('auth-password')
+  .addEventListener('keydown', e => {
+    if (e.key === 'Enter') window.login();
+  });
+</script>
+</body>
+</html>
